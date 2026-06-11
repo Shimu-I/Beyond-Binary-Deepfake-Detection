@@ -36,7 +36,7 @@ st.markdown("""
 IMG_SIZE        = (299, 299)
 CONFIDENCE_LOW  = 0.40
 CONFIDENCE_HIGH = 0.60
-HF_REPO_ID      = "YOUR_HF_USERNAME/deepfake-detector-model"
+HF_REPO_ID      = "shimu-i/deepfake-detector-model"
 MODEL_FILENAME  = "ffpp_adapted_final.keras"
 
 @st.cache_resource(show_spinner=False)
