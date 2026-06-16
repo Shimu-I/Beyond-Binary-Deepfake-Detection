@@ -216,6 +216,24 @@ code{font-family:'Source Code Pro',monospace;background:var(--tag-bg);color:var(
   transition:all 0.18s ease;color:var(--body-col);
 }
 .theme-btn:hover{background:var(--accent-lt);border-color:var(--accent)}
+.font-size-ctrl{
+  display:flex;align-items:center;gap:0;
+  background:var(--beige);border:1px solid var(--border);border-radius:8px;
+  overflow:hidden;
+}
+.font-size-ctrl button{
+  background:transparent;border:none;border-radius:0;
+  padding:0.32rem 0.6rem;cursor:pointer;font-size:0.85rem;line-height:1;
+  color:var(--body-col);font-weight:600;
+  transition:background 0.18s ease;
+}
+.font-size-ctrl button:hover{background:var(--accent-lt);color:var(--accent)}
+.font-size-ctrl .fs-label{
+  font-size:0.72rem;color:var(--muted-col);padding:0 0.3rem;
+  white-space:nowrap;font-family:'Inter',sans-serif;min-width:2.8rem;text-align:center;
+}
+.font-size-ctrl button:first-child{border-right:1px solid var(--border)}
+.font-size-ctrl button:last-child{border-left:1px solid var(--border)}
 .menu-btn{
   display:none;background:var(--beige);border:1px solid var(--border);
   border-radius:8px;padding:0.32rem 0.6rem;cursor:pointer;font-size:1rem;color:var(--body-col);
@@ -227,11 +245,9 @@ code{font-family:'Source Code Pro',monospace;background:var(--tag-bg);color:var(
 #stats-strip{
   display:flex;gap:0.75rem;padding:0.9rem 1.8rem;
   background:var(--beige);border-bottom:1px solid var(--border);
-  overflow-x:auto;flex-wrap:nowrap;
+  flex-wrap:wrap;
   transition:background var(--transition);
 }
-#stats-strip::-webkit-scrollbar{height:3px}
-#stats-strip::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .stat-chip{
   flex-shrink:0;display:flex;align-items:center;gap:0.55rem;
   background:var(--card-bg);border:1px solid var(--border);
@@ -248,7 +264,7 @@ code{font-family:'Source Code Pro',monospace;background:var(--tag-bg);color:var(
 /* ═══════════════════════════════════════════════════
    CONTENT AREA
 ═══════════════════════════════════════════════════ */
-#content{padding:2.2rem 2.2rem 4rem;max-width:1100px}
+#content{padding:2.2rem 2.2rem 4rem;max-width:1100px;margin:0 auto}
 
 /* ═══════════════════════════════════════════════════
    SECTION WRAPPERS
@@ -875,6 +891,63 @@ thead th{
 .phase-badge{transition:all 0.18s ease;user-select:none}
 
 /* ═══════════════════════════════════════════════════
+   DIAGRAM DOWNLOAD BUTTON + DROPDOWN
+═══════════════════════════════════════════════════ */
+.diagram-wrap{position:relative;display:block}
+.diagram-dl-btn{
+  position:absolute;top:8px;right:8px;z-index:25;
+  width:26px;height:26px;padding:0;border-radius:6px;
+  background:var(--accent);color:#fff;border:none;
+  cursor:pointer;font-size:0.85rem;font-weight:600;
+  font-family:'Inter',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:0;
+  box-shadow:0 2px 8px rgba(0,0,0,0.22);
+  transition:background 0.15s;white-space:nowrap;
+}
+.diagram-dl-btn:hover{background:var(--forest)}
+.diagram-dl-menu{
+  display:none;position:absolute;top:40px;right:8px;z-index:26;
+  background:var(--card-bg);border:1px solid var(--border);
+  border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);
+  overflow:hidden;min-width:130px;
+}
+.diagram-dl-menu.open{display:block}
+.diagram-dl-menu button{
+  display:flex;align-items:center;gap:8px;
+  width:100%;padding:0.5rem 0.85rem;
+  background:transparent;border:none;border-bottom:1px solid var(--border);
+  cursor:pointer;font-size:0.78rem;color:var(--body-col);
+  font-family:'Inter',sans-serif;text-align:left;
+  transition:background 0.12s;
+}
+.diagram-dl-menu button:last-child{border-bottom:none}
+.diagram-dl-menu button:hover{background:var(--accent-lt);color:var(--accent)}
+
+/* ═══════════════════════════════════════════════════
+   SIDEBAR COLLAPSE / EXPAND
+═══════════════════════════════════════════════════ */
+#sidebar-collapse-btn{
+  position:fixed;
+  top:50%;
+  left:var(--sidebar-w);
+  transform:translate(-50%,-50%);
+  width:24px;height:40px;border-radius:0 6px 6px 0;
+  background:var(--accent);color:#fff;border:none;
+  cursor:pointer;font-size:0.7rem;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:2px 0 8px var(--shadow-md);
+  transition:left var(--transition),background 0.18s;
+  z-index:950;
+}
+#sidebar-collapse-btn:hover{background:var(--forest)}
+body.sidebar-collapsed #sidebar{transform:translateX(calc(-1 * var(--sidebar-w)))}
+body.sidebar-collapsed #main-wrap{margin-left:0}
+body.sidebar-collapsed #progress-track{left:0}
+body.sidebar-collapsed #sidebar-collapse-btn{left:0;transform:translate(0,-50%)}
+body.sidebar-collapsed #stats-strip{justify-content:center}
+@media(max-width:900px){#sidebar-collapse-btn{display:none}}
+
+/* ═══════════════════════════════════════════════════
    SIDEBAR OPEN ANIMATION
 ═══════════════════════════════════════════════════ */
 #sidebar{transition:transform 0.28s cubic-bezier(0.4,0,0.2,1),background var(--transition)}
@@ -1048,6 +1121,7 @@ thead th{
     <span style="opacity:0.6">Press / to search</span>
   </div>
 </nav>
+<button id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
 <div id="overlay" onclick="closeSidebar()"></div>
 
 <!-- ╔══════════════════════════════════════════════╗
@@ -1066,6 +1140,11 @@ thead th{
       <div id="search-results-popup"></div>
     </div>
     <div class="topbar-right">
+      <div class="font-size-ctrl" title="Adjust font size">
+        <button onclick="adjustFontSize(-1)" title="Decrease font size">A−</button>
+        <span class="fs-label" id="fs-label">100%</span>
+        <button onclick="adjustFontSize(1)" title="Increase font size">A+</button>
+      </div>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">🌙</button>
     </div>
   </header>
@@ -1461,7 +1540,7 @@ thead th{
     </div>
     <div class="arch-wrap">
       <!-- SVG Dual-Stream Architecture Diagram -->
-      <svg viewBox="0 0 820 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:820px;font-family:Ubuntu,Inter,sans-serif">
+      <svg viewBox="0 0 820 530" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:820px;font-family:Ubuntu,Inter,sans-serif">
         <defs>
           <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#5C7A4E"/></marker>
           <marker id="arr-w" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#C4A882"/></marker>
@@ -1536,10 +1615,11 @@ thead th{
         <line x1="410" y1="438" x2="410" y2="462" stroke="#5C7A4E" stroke-width="2" marker-end="url(#arr)"/>
 
         <!-- Classification head -->
-        <rect x="270" y="462" width="280" height="45" rx="8" fill="#1E3A1E" stroke="#7A9E6B" stroke-width="1.5"/>
+        <rect x="270" y="462" width="280" height="66" rx="8" fill="#1E3A1E" stroke="#7A9E6B" stroke-width="1.5"/>
         <text x="410" y="479" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Classification Head</text>
-        <text x="410" y="495" text-anchor="middle" font-size="9" fill="#A8C49A">Dense(256,ReLU) → Dropout(0.5) → Dense(1,sigmoid)</text>
-        <text x="410" y="508" text-anchor="middle" font-size="9" fill="#7A9E6B">P(FAKE) ∈ [0, 1]</text>
+        <text x="410" y="494" text-anchor="middle" font-size="8.5" fill="#A8C49A">Dense(256,ReLU) → Dropout(0.5)</text>
+        <text x="410" y="506" text-anchor="middle" font-size="8.5" fill="#A8C49A">→ Dense(1,sigmoid)</text>
+        <text x="410" y="519" text-anchor="middle" font-size="9" fill="#7A9E6B">P(FAKE) ∈ [0, 1]</text>
 
         <!-- Stream labels floating -->
         <text x="65" y="260" font-size="9" fill="#5C7A4E" font-weight="700" transform="rotate(-90,65,260)">SPATIAL → micro-texture</text>
@@ -2617,8 +2697,6 @@ thead th{
     </div>
   </section>
 
-  </main><!-- /content -->
-
   <!-- ─────────────────────────────────────────────
        SECTION: INTERACTIVE PERFORMANCE CHARTS
   ───────────────────────────────────────────── -->
@@ -3022,27 +3100,27 @@ thead th{
 
     <h3 style="margin-bottom:0.8rem">25 Generators Evaluated</h3>
     <div class="card">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.5rem">
-        <div style="background:var(--accent-lt);border-radius:7px;padding:0.5rem 0.7rem;font-size:0.78rem">
-          <div style="font-weight:700;color:var(--accent);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">GANs</div>
-          <div>StyleGAN1 · StyleGAN2 · StyleGAN3</div>
-          <div>ProGAN · BigGAN · GANFormer</div>
-          <div>CycleGAN · StarGAN · AttGAN</div>
-          <div>PGGAN · SNGAN · ContraGAN</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem">
+        <div style="background:var(--accent-lt);border-radius:7px;padding:0.65rem 0.85rem;font-size:0.78rem;min-width:0">
+          <div style="font-weight:700;color:var(--accent);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">GANs</div>
+          <div style="line-height:1.75">StyleGAN1 · StyleGAN2 · StyleGAN3</div>
+          <div style="line-height:1.75">ProGAN · BigGAN · GANFormer</div>
+          <div style="line-height:1.75">CycleGAN · StarGAN · AttGAN</div>
+          <div style="line-height:1.75">PGGAN · SNGAN · ContraGAN</div>
         </div>
-        <div style="background:rgba(139,107,74,0.1);border-radius:7px;padding:0.5rem 0.7rem;font-size:0.78rem">
-          <div style="font-weight:700;color:var(--earth);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Diffusion Models</div>
-          <div>DDPM · Latent Diffusion</div>
-          <div>VQ-Diffusion · GLIDE</div>
-          <div>Stable Diffusion (variants)</div>
-          <div>Score-based SDE</div>
+        <div style="background:rgba(139,107,74,0.1);border-radius:7px;padding:0.65rem 0.85rem;font-size:0.78rem;min-width:0">
+          <div style="font-weight:700;color:var(--earth);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">Diffusion Models</div>
+          <div style="line-height:1.75">DDPM · Latent Diffusion</div>
+          <div style="line-height:1.75">VQ-Diffusion · GLIDE</div>
+          <div style="line-height:1.75">Stable Diffusion (variants)</div>
+          <div style="line-height:1.75">Score-based SDE</div>
         </div>
-        <div style="background:rgba(45,74,45,0.07);border-radius:7px;padding:0.5rem 0.7rem;font-size:0.78rem">
-          <div style="font-weight:700;color:var(--forest);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Other</div>
-          <div>VQGAN · DALL-E (v1)</div>
-          <div>CLIP-guided synthesis</div>
-          <div>Flow-based models</div>
-          <div style="margin-top:4px;font-style:italic;color:var(--muted-col);font-size:0.72rem">None used in training</div>
+        <div style="background:rgba(45,74,45,0.07);border-radius:7px;padding:0.65rem 0.85rem;font-size:0.78rem;min-width:0">
+          <div style="font-weight:700;color:var(--forest);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">Other</div>
+          <div style="line-height:1.75">VQGAN · DALL-E (v1)</div>
+          <div style="line-height:1.75">CLIP-guided synthesis</div>
+          <div style="line-height:1.75">Flow-based models</div>
+          <div style="margin-top:0.4rem;font-style:italic;color:var(--muted-col);font-size:0.72rem">None used in training</div>
         </div>
       </div>
     </div>
@@ -3105,6 +3183,8 @@ thead th{
     </div>
   </section>
 
+  </main><!-- /content -->
+
   <!-- FOOTER -->
   <div class="dash-footer">
     🌲 Beyond Binary Detection · XAI Deepfake Localization via Frequency-Aware Dual-Stream CNN &nbsp;|&nbsp;
@@ -3142,6 +3222,66 @@ function toggleTheme(){
 })();
 
 /* ════════════════════════════════════════════════
+   FONT SIZE CONTROL
+════════════════════════════════════════════════ */
+(function(){
+  const MIN_PCT=70,MAX_PCT=150,STEP=10;
+  let currentPct=100;
+  const fsLabel=document.getElementById('fs-label');
+
+  // Cache each SVG's original inline max-width / width style on first call
+  let svgOriginals=null;
+  function cacheSvgSizes(){
+    if(svgOriginals)return;
+    svgOriginals=[];
+    document.querySelectorAll(
+      '.arch-wrap svg, .pipeline-wrap svg, .chart-container svg, .card svg'
+    ).forEach(svg=>{
+      // Record the base percentage width (always 100%) and any max-width from style attr
+      const styleMaxW=svg.style.maxWidth||'';
+      const baseMaxPx=styleMaxW?parseFloat(styleMaxW):null;
+      svgOriginals.push({svg, baseMaxPx});
+    });
+  }
+
+  function applyFontSize(pct){
+    const scale=pct/100;
+
+    // 1. Scale HTML root font-size (all rem/em HTML text)
+    document.documentElement.style.fontSize=scale*16+'px';
+
+    // 2. Scale entire SVG elements so boxes + text grow together
+    cacheSvgSizes();
+    svgOriginals.forEach(({svg,baseMaxPx})=>{
+      if(baseMaxPx){
+        // SVGs that have a max-width: scale that max-width
+        svg.style.maxWidth=baseMaxPx*scale+'px';
+      }
+      // Also set an explicit width so the SVG expands beyond its default
+      // The SVG already has width:100% so scaling its container is enough;
+      // but for SVGs with a capped max-width we set it above.
+    });
+
+    if(fsLabel)fsLabel.textContent=pct+'%';
+    try{localStorage.setItem('bbd-fontsize',pct);}catch(e){}
+  }
+
+  window.adjustFontSize=function(dir){
+    const next=currentPct+(dir*STEP);
+    if(next<MIN_PCT||next>MAX_PCT){
+      showToast(dir>0?'🔠 Max font size reached':'🔡 Min font size reached');return;
+    }
+    currentPct=next;
+    applyFontSize(currentPct);
+    showToast(dir>0?'🔠 Font enlarged':'🔡 Font reduced');
+  };
+  try{
+    const s=parseInt(localStorage.getItem('bbd-fontsize'));
+    if(s&&s>=MIN_PCT&&s<=MAX_PCT){currentPct=s;applyFontSize(currentPct);}
+  }catch(e){}
+})();
+
+/* ════════════════════════════════════════════════
    TOAST
 ════════════════════════════════════════════════ */
 const toastEl=document.getElementById('toast');
@@ -3172,6 +3312,26 @@ function closeSidebar(){
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('active');
 }
+
+/* ════════════════════════════════════════════════
+   SIDEBAR COLLAPSE (desktop)
+════════════════════════════════════════════════ */
+(function(){
+  const btn=document.getElementById('sidebar-collapse-btn');
+  function updateBtn(collapsed){
+    if(btn)btn.textContent=collapsed?'▶':'◀';
+    if(btn)btn.title=collapsed?'Expand sidebar':'Collapse sidebar';
+  }
+  window.toggleSidebarCollapse=function(){
+    const collapsed=document.body.classList.toggle('sidebar-collapsed');
+    updateBtn(collapsed);
+    try{localStorage.setItem('bbd-sidebar-collapsed',collapsed?'1':'0');}catch(e){}
+  };
+  try{
+    const s=localStorage.getItem('bbd-sidebar-collapsed');
+    if(s==='1'){document.body.classList.add('sidebar-collapsed');updateBtn(true);}
+  }catch(e){}
+})();
 
 /* ════════════════════════════════════════════════
    SCROLL PROGRESS + SCROLL SPY
@@ -3888,6 +4048,132 @@ if(contribGrid){
 ════════════════════════════════════════════════ */
 onScroll();
 showToast('🌲 Research Dashboard Loaded',1800);
+
+/* ════════════════════════════════════════════════
+   DIAGRAM DOWNLOAD BUTTONS — SVG / PNG / JPEG
+════════════════════════════════════════════════ */
+(function(){
+  const containers=[
+    ...document.querySelectorAll('.arch-wrap'),
+    ...document.querySelectorAll('.pipeline-wrap'),
+    ...document.querySelectorAll('.chart-container'),
+  ];
+  document.querySelectorAll('.card > svg, .card-grid > * > svg').forEach(svg=>{
+    if(!svg.closest('.arch-wrap')&&!svg.closest('.pipeline-wrap')&&!svg.closest('.chart-container')){
+      containers.push(svg.parentElement);
+    }
+  });
+
+  // Close all open menus
+  function closeAllMenus(){
+    document.querySelectorAll('.diagram-dl-menu.open').forEach(m=>m.classList.remove('open'));
+  }
+  document.addEventListener('click',closeAllMenus);
+
+  function getSvg(container){
+    return container.tagName==='SVG'?container:container.querySelector('svg');
+  }
+
+  function downloadSVG(svg,name){
+    const clone=svg.cloneNode(true);
+    // Embed current computed styles for theme colours
+    const serialized=new XMLSerializer().serializeToString(clone);
+    const blob=new Blob([serialized],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=name+'.svg';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('⬇ Downloaded SVG');
+  }
+
+  function downloadRaster(svg,name,format){
+    const vb=svg.viewBox.baseVal;
+    const W=vb.width||svg.getBoundingClientRect().width||800;
+    const H=vb.height||svg.getBoundingClientRect().height||600;
+    const scale=2; // 2× for crisp export
+    const clone=svg.cloneNode(true);
+    clone.setAttribute('width',W);clone.setAttribute('height',H);
+    // Inject white / dark background rect so exported PNG/JPEG isn't transparent
+    const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+    const bgColor=isDark?'#1E2A1E':'#FFFFFF';
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x','0');bg.setAttribute('y','0');
+    bg.setAttribute('width',W);bg.setAttribute('height',H);
+    bg.setAttribute('fill',bgColor);
+    clone.insertBefore(bg,clone.firstChild);
+    const svgStr=new XMLSerializer().serializeToString(clone);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=W*scale;canvas.height=H*scale;
+      const ctx=canvas.getContext('2d');
+      if(format==='jpeg'){ctx.fillStyle=bgColor;ctx.fillRect(0,0,canvas.width,canvas.height);}
+      ctx.scale(scale,scale);
+      ctx.drawImage(img,0,0);
+      const mime=format==='jpeg'?'image/jpeg':'image/png';
+      const quality=format==='jpeg'?0.95:undefined;
+      canvas.toBlob(blob=>{
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download=name+'.'+format;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('⬇ Downloaded '+(format==='jpeg'?'JPEG':'PNG'));
+      },mime,quality);
+    };
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);
+  }
+
+  const seen=new Set();
+  containers.forEach((container,i)=>{
+    if(!container||seen.has(container))return;
+    seen.add(container);
+    if(getComputedStyle(container).position==='static'){container.style.position='relative';}
+
+    // Derive filename
+    const section=container.closest('.section');
+    const heading=section?section.querySelector('h2,h3'):null;
+    const name=(heading?heading.textContent.trim().replace(/[^a-z0-9]+/gi,'-').toLowerCase():'diagram')+'-'+i;
+
+    // Build button
+    const btn=document.createElement('button');
+    btn.className='diagram-dl-btn';
+    btn.innerHTML='⬇';
+    btn.title='Download this diagram';
+
+    // Build dropdown menu
+    const menu=document.createElement('div');
+    menu.className='diagram-dl-menu';
+
+    const formats=[
+      {label:'📄  SVG  (vector)',  fmt:'svg'},
+      {label:'🖼️  PNG  (lossless)',fmt:'png'},
+      {label:'📷  JPEG (compressed)',fmt:'jpeg'},
+    ];
+    formats.forEach(({label,fmt})=>{
+      const opt=document.createElement('button');
+      opt.textContent=label;
+      opt.addEventListener('click',e=>{
+        e.stopPropagation();
+        closeAllMenus();
+        const svg=getSvg(container);
+        if(!svg){showToast('⚠️ No diagram found');return;}
+        if(fmt==='svg') downloadSVG(svg,name);
+        else             downloadRaster(svg,name,fmt);
+      });
+      menu.appendChild(opt);
+    });
+
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const isOpen=menu.classList.contains('open');
+      closeAllMenus();
+      if(!isOpen)menu.classList.add('open');
+    });
+
+    container.appendChild(btn);
+    container.appendChild(menu);
+  });
+})();
 
 
 </script>
