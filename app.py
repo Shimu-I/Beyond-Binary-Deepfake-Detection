@@ -71,17 +71,22 @@ def preprocess_dct(img_array):
 
 
 # ── Grad-CAM ─────────────────────────────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def build_grad_model(_model, last_conv_layer="block14_sepconv2_act"):
+    """Build the Grad-CAM sub-model once and cache it, instead of rebuilding
+    it from scratch on every single upload."""
+    spatial_model = _model.get_layer("spatial")
+    conv_layer    = spatial_model.get_layer(last_conv_layer)
+    return tf.keras.Model(
+        inputs  = spatial_model.inputs,
+        outputs = [conv_layer.output, spatial_model.output]
+    )
+
+
 def make_gradcam(model, rgb_input, last_conv_layer="block14_sepconv2_act"):
     """Returns a heatmap array, or None if anything goes wrong (never raises)."""
     try:
-        spatial_model = model.get_layer("spatial")
-        conv_layer    = spatial_model.get_layer(last_conv_layer)
-
-        grad_model = tf.keras.Model(
-            inputs  = spatial_model.inputs,
-            outputs = [conv_layer.output, spatial_model.output]
-        )
-
+        grad_model = build_grad_model(model, last_conv_layer)
         rgb_t = tf.cast(rgb_input[np.newaxis], tf.float32)
 
         with tf.GradientTape() as tape:
@@ -247,34 +252,44 @@ with right:
 st.divider()
 st.markdown("### Explainability — Where Did the Model Look?")
 
-with st.spinner("Generating Grad-CAM heatmap..."):
-    heatmap = make_gradcam(model, rgb_input)
-
 e1, e2, e3 = st.columns(3)
 
 with e1:
     st.markdown('<p class="section-header">Original (resized)</p>', unsafe_allow_html=True)
-    st.image(cv2.resize(img_array, IMG_SIZE), use_container_width=True)
-    st.caption("Input as seen by the RGB stream")
+    original_slot = st.empty()
+    original_caption = st.empty()
 
 with e2:
     st.markdown('<p class="section-header">Grad-CAM Heatmap</p>', unsafe_allow_html=True)
-    if heatmap is not None:
-        try:
-            st.image(overlay_heatmap(img_array, heatmap), use_container_width=True)
-            st.caption("🔴 Red = high attention  🔵 Blue = low attention")
-        except Exception:
-            st.warning("Grad-CAM heatmap couldn't be rendered for this image.")
-    else:
-        st.warning("Grad-CAM unavailable for this model/image.")
+    gradcam_slot = st.empty()
+    gradcam_slot.info("Computing...")
+    st.caption("🔴 Red = high attention  🔵 Blue = low attention")
 
 with e3:
     st.markdown('<p class="section-header">DCT Frequency Map</p>', unsafe_allow_html=True)
+    dct_slot = st.empty()
+    dct_slot.info("Computing...")
+    st.caption("Bright = high-frequency AI generation artifacts")
+
+
+original_slot.image(cv2.resize(img_array, IMG_SIZE), use_container_width=True)
+original_caption.caption("Input as seen by the RGB stream")
+
+with st.spinner("Generating Grad-CAM heatmap..."):
+    heatmap = make_gradcam(model, rgb_input)
+
+if heatmap is not None:
     try:
-        st.image(visualise_dct(dct_input), use_container_width=True)
-        st.caption("Bright = high-frequency AI generation artifacts")
+        gradcam_slot.image(overlay_heatmap(img_array, heatmap), use_container_width=True)
     except Exception:
-        st.warning("DCT map couldn't be rendered for this image.")
+        gradcam_slot.warning("Grad-CAM heatmap couldn't be rendered for this image.")
+else:
+    gradcam_slot.warning("Grad-CAM unavailable for this model/image.")
+
+try:
+    dct_slot.image(visualise_dct(dct_input), use_container_width=True)
+except Exception:
+    dct_slot.warning("DCT map couldn't be rendered for this image.")
 
 with st.expander("Technical details"):
     st.markdown(f"""
