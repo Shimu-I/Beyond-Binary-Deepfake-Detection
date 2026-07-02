@@ -6,3 +6,5 @@ __pycache__/
 .DS_Store
 venv/
 venv/
+upload_model.py
+upload_model.py
