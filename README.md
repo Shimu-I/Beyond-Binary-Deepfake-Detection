@@ -1,17 +1,9 @@
 ![Visitor Count](https://visitor-badge.laobi.icu/badge?page_id=shimu-i/Beyond-Binary-DeepFake-Detection_)
-
+# Beyond Binary: Explainable AI (XAI) Deepfake Localization via Frequency-Aware Segmentation
 ![](image.png)
 ![](image2.png)
 
 
----
-title: Deepfake Detector
-emoji: 🔍
-colorFrom: blue
-colorTo: red
-sdk: docker
-pinned: false
----
 
 # deepfake-detector
 
