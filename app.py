@@ -1,12 +1,12 @@
 import os
+import traceback
 import cv2
 import numpy as np
 import streamlit as st
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from PIL import Image
-from huggingface_hub import hf_hub_download
+from PIL import Image, UnidentifiedImageError
 
 st.set_page_config(
     page_title="Deepfake Detector",
@@ -33,26 +33,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-IMG_SIZE        = (299, 299)
-CONFIDENCE_LOW  = 0.40
-CONFIDENCE_HIGH = 0.60
-HF_REPO_ID      = "shimu-i/deepfake-detector-model"
-MODEL_FILENAME  = "ffpp_adapted_final.keras"
+IMG_SIZE         = (299, 299)
+CONFIDENCE_LOW   = 0.40
+CONFIDENCE_HIGH  = 0.60
+MODEL_FILENAME   = "ffpp_adapted_final.keras"
+MAX_UPLOAD_MB    = 15   # reject absurdly large uploads before they hit PIL/cv2
 
+
+# ── Model loading ────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def load_model():
+    """Load the model from disk. Returns None on failure instead of crashing."""
     with st.spinner("Loading model..."):
+        if not os.path.exists(MODEL_FILENAME):
+            return None, f"Model file not found: `{MODEL_FILENAME}`. Place it next to app.py."
         try:
-            path = MODEL_FILENAME
-        except Exception:
-            path = MODEL_FILENAME
-            if not os.path.exists(path):
-                st.error("Model not found. Place ffpp_adapted_final.keras in the project folder.")
-                st.stop()
-        return tf.keras.models.load_model(path)
+            model = tf.keras.models.load_model(MODEL_FILENAME)
+        except Exception as e:
+            traceback.print_exc()  # full traceback goes to your terminal, not the user
+            return None, f"Failed to load model ({type(e).__name__}). Check the terminal log for details."
+        return model, None
 
+
+# ── Preprocessing ────────────────────────────────────────────────────────────
 def preprocess_rgb(img_array):
-    return cv2.resize(img_array, IMG_SIZE).astype(np.float32) / 255.0
+    resized = cv2.resize(img_array, IMG_SIZE).astype(np.float32) / 255.0
+    return resized
+
 
 def preprocess_dct(img_array):
     gray = cv2.cvtColor(img_array.astype(np.uint8), cv2.COLOR_RGB2GRAY)
@@ -62,12 +69,14 @@ def preprocess_dct(img_array):
     dct  = cv2.normalize(dct, None, 0, 1, cv2.NORM_MINMAX)
     return np.stack([dct] * 3, axis=-1)
 
-def make_gradcam(model, rgb_input, dct_input, last_conv_layer="block14_sepconv2_act"):
+
+# ── Grad-CAM ─────────────────────────────────────────────────────────────────
+def make_gradcam(model, rgb_input, last_conv_layer="block14_sepconv2_act"):
+    """Returns a heatmap array, or None if anything goes wrong (never raises)."""
     try:
-        spatial_model = model.get_layer('spatial')
+        spatial_model = model.get_layer("spatial")
         conv_layer    = spatial_model.get_layer(last_conv_layer)
 
-        # Use spatial sub-model standalone — build grad model within its own graph
         grad_model = tf.keras.Model(
             inputs  = spatial_model.inputs,
             outputs = [conv_layer.output, spatial_model.output]
@@ -77,30 +86,39 @@ def make_gradcam(model, rgb_input, dct_input, last_conv_layer="block14_sepconv2_
 
         with tf.GradientTape() as tape:
             conv_out, spatial_out = grad_model(rgb_t)
-            # Use mean of spatial output as proxy loss
             loss = tf.reduce_mean(spatial_out)
 
-        grads  = tape.gradient(loss, conv_out)
+        grads = tape.gradient(loss, conv_out)
+        if grads is None:
+            return None
+
         pooled = tf.reduce_mean(grads, axis=(0, 1, 2))
         cam    = tf.reduce_sum(tf.multiply(pooled, conv_out[0]), axis=-1).numpy()
         cam    = np.maximum(cam, 0)
         cam    = cv2.resize(cam, IMG_SIZE)
-        cam    = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
+        cam_range = cam.max() - cam.min()
+        if cam_range < 1e-8:
+            return None
+        cam = (cam - cam.min()) / (cam_range + 1e-8)
         return cam
     except Exception as e:
-        print("Grad-CAM error:", e)
+        print("Grad-CAM error:", repr(e))
         return None
+
 
 def overlay_heatmap(original_rgb, heatmap, alpha=0.45):
     coloured = (cm.jet(heatmap)[:, :, :3] * 255).astype(np.uint8)
     base     = cv2.resize(original_rgb.astype(np.uint8), IMG_SIZE)
     return cv2.addWeighted(base, 1 - alpha, coloured, alpha, 0)
 
+
 def visualise_dct(dct_map):
     vis = (dct_map[:, :, 0] * 255).astype(np.uint8)
     vis = cv2.applyColorMap(vis, cv2.COLORMAP_INFERNO)
     return cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
 
+
+# ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("🔍 Deepfake Detector")
     st.caption("Phase 17 — Final Deployment")
@@ -123,6 +141,12 @@ with st.sidebar:
 st.title("Beyond Binary Detection")
 st.markdown("Upload an image to detect whether it is AI-generated and see **where** the model found evidence.")
 
+# ── Load model up front so we fail fast with a clean message ────────────────
+model, load_error = load_model()
+if load_error:
+    st.error(f"⚠️ {load_error}")
+    st.stop()
+
 uploaded = st.file_uploader("Drop an image here (JPG, PNG, WEBP)", type=["jpg", "jpeg", "png", "webp"])
 
 if uploaded is None:
@@ -144,16 +168,43 @@ if uploaded is None:
         """)
     st.stop()
 
-model     = load_model()
-pil_img   = Image.open(uploaded).convert("RGB")
-img_array = np.array(pil_img)
-rgb_input = preprocess_rgb(img_array)
-dct_input = preprocess_dct(img_array)
+# ── Guard: upload size ────────────────────────────────────────────────────────
+size_mb = uploaded.size / (1024 * 1024)
+if size_mb > MAX_UPLOAD_MB:
+    st.error(f"File is {size_mb:.1f} MB — please upload something under {MAX_UPLOAD_MB} MB.")
+    st.stop()
 
-with st.spinner("Analysing..."):
-    prob = float(model.predict(
-        [rgb_input[np.newaxis], dct_input[np.newaxis]], verbose=0
-    )[0][0])
+# ── Guard: image decoding ─────────────────────────────────────────────────────
+try:
+    pil_img = Image.open(uploaded).convert("RGB")
+    img_array = np.array(pil_img)
+    if img_array.size == 0:
+        raise ValueError("Empty image")
+except UnidentifiedImageError:
+    st.error("That file doesn't look like a valid image. Try a JPG, PNG, or WEBP.")
+    st.stop()
+except Exception as e:
+    st.error(f"Couldn't read that image ({type(e).__name__}). Try a different file.")
+    st.stop()
+
+# ── Guard: preprocessing ───────────────────────────────────────────────────────
+try:
+    rgb_input = preprocess_rgb(img_array)
+    dct_input = preprocess_dct(img_array)
+except Exception as e:
+    st.error(f"Failed while preparing the image for the model ({type(e).__name__}).")
+    st.stop()
+
+# ── Guard: inference ────────────────────────────────────────────────────────────
+try:
+    with st.spinner("Analysing..."):
+        prob = float(model.predict(
+            [rgb_input[np.newaxis], dct_input[np.newaxis]], verbose=0
+        )[0][0])
+except Exception as e:
+    traceback.print_exc()
+    st.error(f"Inference failed ({type(e).__name__}). Check the terminal log for details.")
+    st.stop()
 
 is_fake   = prob >= threshold
 uncertain = CONFIDENCE_LOW < prob < CONFIDENCE_HIGH
@@ -197,7 +248,7 @@ st.divider()
 st.markdown("### Explainability — Where Did the Model Look?")
 
 with st.spinner("Generating Grad-CAM heatmap..."):
-    heatmap = make_gradcam(model, rgb_input, dct_input)
+    heatmap = make_gradcam(model, rgb_input)
 
 e1, e2, e3 = st.columns(3)
 
@@ -209,15 +260,21 @@ with e1:
 with e2:
     st.markdown('<p class="section-header">Grad-CAM Heatmap</p>', unsafe_allow_html=True)
     if heatmap is not None:
-        st.image(overlay_heatmap(img_array, heatmap), use_container_width=True)
-        st.caption("🔴 Red = high attention  🔵 Blue = low attention")
+        try:
+            st.image(overlay_heatmap(img_array, heatmap), use_container_width=True)
+            st.caption("🔴 Red = high attention  🔵 Blue = low attention")
+        except Exception:
+            st.warning("Grad-CAM heatmap couldn't be rendered for this image.")
     else:
-        st.warning("Grad-CAM unavailable for this model.")
+        st.warning("Grad-CAM unavailable for this model/image.")
 
 with e3:
     st.markdown('<p class="section-header">DCT Frequency Map</p>', unsafe_allow_html=True)
-    st.image(visualise_dct(dct_input), use_container_width=True)
-    st.caption("Bright = high-frequency AI generation artifacts")
+    try:
+        st.image(visualise_dct(dct_input), use_container_width=True)
+        st.caption("Bright = high-frequency AI generation artifacts")
+    except Exception:
+        st.warning("DCT map couldn't be rendered for this image.")
 
 with st.expander("Technical details"):
     st.markdown(f"""
