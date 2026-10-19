@@ -1,8 +1,0 @@
-streamlit>=1.40.0
-tensorflow==2.16.1
-keras==3.14.1
-opencv-python-headless==4.9.0.80
-numpy==1.26.4
-matplotlib==3.8.4
-Pillow==10.3.0
-huggingface-hub==0.23.2
